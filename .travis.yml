@@ -1,0 +1,19 @@
+language: go
+
+install: echo 'INSTALL'
+
+script:
+  - mkdir -p build
+  - echo "$TRAVIS_BUILD_NUMBER - $TRAVIS_COMMIT - $TRAVIS_COMMIT_MESSAGE" >> build/generated.txt
+
+
+deploy:
+  local-dir: build
+  target-branch: generated
+  keep-history: true
+  github-token: $GITHUB_TOKEN
+  provider: pages
+  skip-cleanup: true
+  verbose: true
+  on:
+    branch: master
