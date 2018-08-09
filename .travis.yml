@@ -1,35 +1,50 @@
-language: go
+language: minimal
 
 env:
   global:
     - SRC=build/
+
+    - PROTOC=https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
+    - PROTOC_SRC=build/protoc/
+
     - GO_SRC=build/go/
     - GO_BRANCH=go1
+    - GO_VERSION="1.10"
+
     - CSHARP_SRC=build/csharp/
     - CSHARP_BRANCH=csharp
+
     - PY_SRC=build/python/
     - PY_BRANCH=python
 
 stages:
-  - install
   - generate
   - package
   - name: deploy
     if: branch = master
 
+addons:
+  apt:
+    packages:
+      - tree
+
 before_install:
-  - sudo apt-get install -y tree
+  - mkdir -p $PROTOC_SRC
+  - mkdir -p $GO_SRC
+  - mkdir -p $CSHARP_SRC
+  - mkdir -p $PY_SRC
+  - tree .
+
+install:
+  - mkdir -p $PROTOC_SRC
+  - pushd $PROTOC_SRC
+  - wget $PROTOC
+  - unzip protoc*.zip
+  - export PATH=$PATH:$PWD/bin/
+  - popd
 
 jobs:
   include:
-    - stage: install
-      script:
-        - echo 'INSTALL'
-        - mkdir -p $GO_SRC
-        - mkdir -p $CSHARP_SRC
-        - mkdir -p $PY_SRC
-        - tree .
-
     - stage: generate
       name: "Generate Go sources"
       script:
