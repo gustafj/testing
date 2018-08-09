@@ -97,23 +97,25 @@ jobs:
 
     - stage: deploy
       name: "Deploy Go generated sources back to repo"
-      provider: pages
-      local-dir: build/go/
-      target-branch: go1
-      keep-history: true
-      github-token: $GITHUB_TOKEN
-      skip-cleanup: true
-      verbose: true
+      deploy:
+        provider: pages
+        local-dir: build/go/
+        target-branch: go1
+        keep-history: true
+        github-token: $GITHUB_TOKEN
+        skip-cleanup: true
+        verbose: true
 
     - stage: deploy
       name: "Deploy C# generated sources back to repo"
-      provider: pages
-      local-dir: build/csharp/
-      target-branch: csharp
-      keep-history: true
-      github-token: $GITHUB_TOKEN
-      skip-cleanup: true
-      verbose: true
+      deploy:
+        provider: pages
+        local-dir: build/csharp/
+        target-branch: csharp
+        keep-history: true
+        github-token: $GITHUB_TOKEN
+        skip-cleanup: true
+        verbose: true
 
       # Deploy Python generated sources back to repo
       # Deploy .NET nupkg to NuGet
