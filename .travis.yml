@@ -1,19 +1,86 @@
 language: go
 
-install: echo 'INSTALL'
+env:
+  global:
+    - SRC=build/
+    - GO_SRC=build/go/
+    - GO_BRANCH=go1
+    - CSHARP_SRC=build/csharp/
+    - CSHARP_BRANCH=csharp
+    - PY_SRC=build/python/
+    - PY_BRANCH=python
 
-script:
-  - mkdir -p build
-  - echo "$TRAVIS_BUILD_NUMBER - $TRAVIS_COMMIT - $TRAVIS_COMMIT_MESSAGE" >> build/generated.txt
+stages:
+  - install
+  - generate
+  - package
+  - name: deploy
+    if: branch = master
 
+before_install:
+  - sudo apt-get install -y tree
 
-deploy:
-  local-dir: build
-  target-branch: generated
-  keep-history: true
-  github-token: $GITHUB_TOKEN
-  provider: pages
-  skip-cleanup: true
-  verbose: true
-  on:
-    branch: master
+jobs:
+  include:
+    - stage: install
+      script:
+        - echo 'INSTALL'
+        - mkdir -p $GO_SRC
+        - mkdir -p $CSHARP_SRC
+        - mkdir -p $PY_SRC
+        - tree .
+
+    - stage: generate
+      name: "Generate Go sources"
+      script:
+        - echo "$TRAVIS_BUILD_NUMBER" >> $GO_SRC/generated.txt
+
+    - stage: generate
+      name: "Generate C# sources"
+      script:
+        - echo "$TRAVIS_BUILD_NUMBER" >> $CSHARP_SRC/generated.txt
+
+    - stage: generate
+      name: "Generate Python sources"
+      script:
+        - echo "$TRAVIS_BUILD_NUMBER" >> $PY_SRC/generated.txt
+
+    - stage: generate
+      name: "List all generated files"
+      script:
+        - tree $SRC
+
+    - stage: package
+      name: "Build .NET nupkg from C# sources"
+      script:
+        - touch $CSHARP_SRC/gen.$TRAVIS_BUILD_NUMBER.nupkg
+
+    - stage: package
+      name: "Build wheel pkg from Python sources"
+      script:
+        - touch $PY_SRC/gen.$TRAVIS_BUILD_NUMBER.whl
+
+    - stage: deploy
+      name: "Deploy Go generated sources back to repo"
+      provider: pages
+      local-dir: $GO_SRC
+      target-branch: $GO_BRANCH
+      keep-history: true
+      github-token: $GITHUB_TOKEN
+      skip-cleanup: true
+      verbose: true
+
+    - stage: deploy
+      name: "Deploy C# generated sources back to repo"
+      provider: pages
+      local-dir: $CSHARP_SRC
+      target-branch: $CSHARP_BRANCH
+      keep-history: true
+      github-token: $GITHUB_TOKEN
+      skip-cleanup: true
+      verbose: true
+
+      # Deploy Python generated sources back to repo
+      # Deploy .NET nupkg to NuGet
+      # Deploy wheel to PyPi
+
