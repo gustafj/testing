@@ -14,8 +14,9 @@ env:
     - CSHARP_SRC=build/csharp/
     - CSHARP_BRANCH=csharp
 
-    - PY_SRC=build/python/
-    - PY_BRANCH=python
+    - PYTHON_SRC=build/python/
+    - PYTHON_BRANCH=python
+    - PYTHON_VERSION="3.6"
 
 stages:
   - generate
@@ -28,11 +29,20 @@ addons:
     packages:
       - tree
 
+# Cache all the generated files between stages (and builds)
+cache:
+  directories:
+    - $SRC
+
+# Clean out the cache (since we only want it between stages)
+before_cache:
+  - rm -f $SRC
+
 before_install:
   - mkdir -p $PROTOC_SRC
   - mkdir -p $GO_SRC
   - mkdir -p $CSHARP_SRC
-  - mkdir -p $PY_SRC
+  - mkdir -p $PYTHON_SRC
   - tree .
 
 install:
@@ -47,18 +57,23 @@ jobs:
   include:
     - stage: generate
       name: "Generate Go sources"
+      language: go
+      go: $GO_VERSION
       script:
         - echo "$TRAVIS_BUILD_NUMBER" >> $GO_SRC/generated.txt
 
     - stage: generate
       name: "Generate C# sources"
+      language: csharp
       script:
         - echo "$TRAVIS_BUILD_NUMBER" >> $CSHARP_SRC/generated.txt
 
     - stage: generate
       name: "Generate Python sources"
+      language: python
+      python: $PYTHON_VERSION
       script:
-        - echo "$TRAVIS_BUILD_NUMBER" >> $PY_SRC/generated.txt
+        - echo "$TRAVIS_BUILD_NUMBER" >> $PYTHON_SRC/generated.txt
 
     - stage: generate
       name: "List all generated files"
@@ -67,13 +82,16 @@ jobs:
 
     - stage: package
       name: "Build .NET nupkg from C# sources"
+      language: csharp
       script:
         - touch $CSHARP_SRC/gen.$TRAVIS_BUILD_NUMBER.nupkg
 
     - stage: package
       name: "Build wheel pkg from Python sources"
+      language: python
+      python: $PYTHON_VERSION
       script:
-        - touch $PY_SRC/gen.$TRAVIS_BUILD_NUMBER.whl
+        - touch $PYTHON_SRC/gen.$TRAVIS_BUILD_NUMBER.whl
 
     - stage: deploy
       name: "Deploy Go generated sources back to repo"
