@@ -1,6 +1,7 @@
 language: minimal
 
 stages:
+  - install
   - generate
   - package
   - name: deploy
@@ -11,10 +12,8 @@ addons:
     packages:
       - tree
 
-before_install:
-  - mkdir -p protoc build/go build/csharp build/python
-
 install:
+  - mkdir -p protoc
   - pushd protoc
   - wget https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
   - unzip protoc*.zip
@@ -23,12 +22,36 @@ install:
 
 jobs:
   include:
+    - stage: install
+      name: "Fetch Go gRPC protoc plugin"
+      language: go
+      go: "1.10"
+      skip_cleanup: true
+      script:
+        - go get -u github.com/golang/protobuf/protoc-gen-go
+        - export PATH=$PATH:$GOPATH/bin
+
+    - stage: install
+      name: "Fetch C# gRPC protoc plugin"
+      language: csharp
+      mono: none
+      dotnet: 2.0
+      skip_cleanup: true
+      script:
+        - mkdir -p build/csharp_project
+        - pushd build/csharp_project
+        - dotnet new console
+        - env NUGET_PACKAGES=$PWD/packages dotnet add package grpc.tools
+        - popd
+
     - stage: generate
       name: "Generate Go sources"
       language: go
       go: "1.10"
       skip_cleanup: true
       script:
+        - mkdir -p build/go
+        - which protoc
         - echo "$TRAVIS_BUILD_NUMBER" >> build/go/generated.txt
         - tree build
 
@@ -39,6 +62,9 @@ jobs:
       dotnet: 2.0
       skip_cleanup: true
       script:
+        - mkdir -p build/csharp
+        - which protoc
+        - ls -la build/csharp_project/grpc.tools/*/tools/linux_x64/
         - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
         - tree build
 
@@ -48,6 +74,7 @@ jobs:
       python: "3.6"
       skip_cleanup: true
       script:
+        - mkdir -p build/python
         - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
         - tree build
 
