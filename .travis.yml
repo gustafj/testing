@@ -42,6 +42,8 @@ jobs:
     - stage: generate
       name: "Generate C# sources"
       language: csharp
+      mono: none
+      dotnet: 2.0
       script:
         - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
 
@@ -60,6 +62,8 @@ jobs:
     - stage: package
       name: "Build .NET nupkg from C# sources"
       language: csharp
+      mono: none
+      dotnet: 2.0
       script:
         - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
 
