@@ -11,15 +11,6 @@ addons:
     packages:
       - tree
 
-# Cache all the generated files between stages (and builds)
-cache:
-  directories:
-    - build
-
-# Clean out the cache (since we only want it between stages)
-before_cache:
-  - rm -f build
-
 before_install:
   - mkdir -p protoc build/go build/csharp build/python
 
@@ -36,27 +27,28 @@ jobs:
       name: "Generate Go sources"
       language: go
       go: "1.10"
+      skip_cleanup: true
       script:
         - echo "$TRAVIS_BUILD_NUMBER" >> build/go/generated.txt
+        - tree build
 
     - stage: generate
       name: "Generate C# sources"
       language: csharp
       mono: none
       dotnet: 2.0
+      skip_cleanup: true
       script:
         - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
+        - tree build
 
     - stage: generate
       name: "Generate Python sources"
       language: python
       python: "3.6"
+      skip_cleanup: true
       script:
         - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
-
-    - stage: generate
-      name: "List all generated files"
-      script:
         - tree build
 
     - stage: package
@@ -64,6 +56,7 @@ jobs:
       language: csharp
       mono: none
       dotnet: 2.0
+      skip_cleanup: true
       script:
         - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
 
@@ -71,6 +64,7 @@ jobs:
       name: "Build wheel pkg from Python sources"
       language: python
       python: "3.6"
+      skip_cleanup: true
       script:
         - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
 
