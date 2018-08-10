@@ -18,6 +18,20 @@ cache:
   directories:
     - build
 
+# Used by all languages (NOTE: a global install: target needs to be present,
+# since a few languages have defaults which are otherwise used.
+install:
+  - mkdir -p protoc
+  - pushd protoc
+  - wget https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
+  - unzip -u protoc*.zip
+  - export PATH=$PATH:$PWD/bin
+  - popd
+  - tree protoc/
+
+# Skip any language defaults
+script: skip
+
 jobs:
   include:
     - stage: clean
@@ -27,21 +41,9 @@ jobs:
         - rm -rf build
 
     - stage: install
-      name: "Fetch protoc binaries"
-      script:
-        - mkdir -p build/protoc
-        - pushd build/protoc
-        - wget https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
-        - unzip -u protoc*.zip
-        - export PATH=$PATH:$PWD/bin
-        - popd
-        - tree build/protoc/
-
-    - stage: install
       name: "Fetch Go gRPC protoc plugin"
       language: go
       go: "1.10"
-      install: true # Skip default
       script:
         - go get -u github.com/golang/protobuf/protoc-gen-go
         - export PATH=$PATH:$GOPATH/bin
@@ -51,7 +53,6 @@ jobs:
       language: csharp
       mono: none
       dotnet: 2.0
-      install: true # Skip default
       script:
         - mkdir -p build/csharp_project
         - pushd build/csharp_project
@@ -63,8 +64,9 @@ jobs:
       name: "Generate Go sources"
       language: go
       go: "1.10"
-      install: true # Skip default
       script:
+        - tree build
+        - tree $GOPATH
         - mkdir -p build/go
         - which protoc
         - echo "$TRAVIS_BUILD_NUMBER" >> build/go/generated.txt
@@ -75,8 +77,9 @@ jobs:
       language: csharp
       mono: none
       dotnet: 2.0
-      install: true # Skip default
       script:
+        - tree build
+        - tree $GOPATH
         - mkdir -p build/csharp
         - which protoc
         - ls -la build/csharp_project/grpc.tools/*/tools/linux_x64/
@@ -87,8 +90,8 @@ jobs:
       name: "Generate Python sources"
       language: python
       python: "3.6"
-      install: true # Skip default
       script:
+        - tree build
         - mkdir -p build/python
         - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
         - tree build/python
@@ -98,7 +101,6 @@ jobs:
       language: csharp
       mono: none
       dotnet: 2.0
-      install: true # Skip default
       script:
         - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
 
@@ -106,7 +108,6 @@ jobs:
       name: "Build wheel pkg from Python sources"
       language: python
       python: "3.6"
-      install: true # Skip default
       script:
         - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
 
