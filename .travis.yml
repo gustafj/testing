@@ -29,7 +29,7 @@ jobs:
   include:
     # Golang
     - stage: before_install
-      name: "Clean out cache"
+      name: "Go: Clean out cache"
       language: go
       go: "1.10"
       before_install:
@@ -37,7 +37,7 @@ jobs:
         - rm -rf build
 
     - stage: install
-      name: "Install protoc compiler"
+      name: "Go: Install protoc compiler"
       language: go
       go: "1.10"
       install:
@@ -50,7 +50,7 @@ jobs:
         - tree build/protoc/
 
     - stage: before_script
-      name: "Fetch Go gRPC protoc plugin"
+      name: "Go: Fetch gRPC protoc plugin"
       language: go
       go: "1.10"
       before_script:
@@ -58,7 +58,7 @@ jobs:
         - export PATH=$PATH:$GOPATH/bin
 
     - stage: script
-      name: "Generate Go sources"
+      name: "Go: Generate sources"
       language: go
       go: "1.10"
       script:
@@ -70,7 +70,7 @@ jobs:
         - tree build/go
 
     - stage: deploy
-      name: "Deploy Go generated sources back to repo"
+      name: "Go: Deploy generated sources back to repo"
       deploy:
         provider: pages
         local-dir: build/go/
@@ -81,7 +81,7 @@ jobs:
 
     # C# & .NET
     - stage: before_install
-      name: "Clean out cache"
+      name: "C#: Clean out cache"
       language: csharp
       mono: none
       dotnet: 2.0
@@ -90,7 +90,7 @@ jobs:
         - rm -rf build
 
     - stage: install
-      name: "Fetch C# gRPC protoc plugin"
+      name: "C#: Fetch gRPC protoc plugin"
       language: csharp
       mono: none
       dotnet: 2.0
@@ -102,7 +102,7 @@ jobs:
         - popd
 
     - stage: script
-      name: "Generate C# sources"
+      name: "C#: Generate sources"
       language: csharp
       mono: none
       dotnet: 2.0
@@ -116,7 +116,7 @@ jobs:
         - tree build/csharp
 
     - stage: after_success
-      name: "Build .NET nupkg from C# sources"
+      name: "C#: Build .NET nupkg"
       language: csharp
       mono: none
       dotnet: 2.0
@@ -124,7 +124,7 @@ jobs:
         - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
 
     - stage: deploy
-      name: "Deploy C# generated sources back to repo"
+      name: "C#: Deploy generated sources back to repo"
       deploy:
         provider: pages
         local-dir: build/csharp/
@@ -135,7 +135,7 @@ jobs:
 
     # Python
     - stage: before_install
-      name: "Clean out cache"
+      name: "Python: Clean out cache"
       language: python
       python: "3.6"
       before_install:
@@ -143,7 +143,7 @@ jobs:
         - rm -rf build
 
     - stage: script
-      name: "Generate Python sources"
+      name: "Python: Generate sources"
       language: python
       python: "3.6"
       script:
@@ -153,7 +153,7 @@ jobs:
         - tree build/python
 
     - stage: after_success
-      name: "Build wheel pkg from Python sources"
+      name: "Python: Build wheel pkg"
       language: python
       python: "3.6"
       after_success:
