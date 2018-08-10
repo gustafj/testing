@@ -22,6 +22,8 @@ install: skip
 # Skip any language defaults
 script: skip
 
+# NOTE: All 'stage:' target _MUST_ have the 'language:' tag to see the correct
+# cache folders!
 jobs:
   include:
     # Golang
@@ -39,20 +41,25 @@ jobs:
       script:
         - go get -u github.com/golang/protobuf/protoc-gen-go
         - export PATH=$PATH:$GOPATH/bin
+      after_failure:
+        - tree build
+        - tree $GOPATH
 
     - stage: build
       name: "Go: Generate sources"
       language: go
       go: "1.10"
       script:
-        - tree build
-        - tree $GOPATH
         - mkdir -p build/go
         - echo "$TRAVIS_BUILD_NUMBER" >> build/go/generated.txt
-        - tree build/go
+      after_failure:
+        - tree build
+        - tree $GOPATH
 
     - stage: deploy
       name: "Go: Deploy generated sources back to repo"
+      language: go
+      go: "1.10"
       deploy:
         provider: pages
         local-dir: build/go/
@@ -61,6 +68,9 @@ jobs:
         github-token: $GITHUB_TOKEN
         skip_cleanup: true
         verbose: true
+      after_failure:
+        - tree build
+        - tree $GOPATH
 
     # C# & .NET
     - stage: install
@@ -77,6 +87,8 @@ jobs:
         - dotnet new console
         - env NUGET_PACKAGES=$PWD/packages dotnet add package grpc.tools
         - popd
+      after_failure:
+        - tree build
 
     - stage: build
       name: "C#: Generate sources and build .NET nupkg"
@@ -84,17 +96,19 @@ jobs:
       mono: none
       dotnet: 2.0
       script:
-        - tree build
-        - tree $GOPATH
         - mkdir -p build/csharp
         - ls -la build/csharp_project/packages/grpc.tools/*/tools/linux_x64/
         - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
-        - tree build/csharp
       after_success:
         - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
+      after_failure:
+        - tree build
 
     - stage: deploy
       name: "C#: Deploy generated sources back to repo"
+      language: csharp
+      mono: none
+      dotnet: 2.0
       deploy:
         provider: pages
         local-dir: build/csharp/
@@ -103,6 +117,17 @@ jobs:
         github-token: $GITHUB_TOKEN
         skip_cleanup: true
         verbose: true
+      after_failure:
+        - tree build
+
+    - stage: deploy
+      name: "C#: Deploy nupkg to NuGet"
+      language: csharp
+      mono: none
+      dotnet: 2.0
+      script: true # TODO deploy target
+      after_failure:
+        - tree build
 
     # Python
     - stage: install
@@ -112,20 +137,42 @@ jobs:
       before_install:
         - tree build
         - rm -rf build
+      install: true # TODO: Fetch python gRPC plugin
+      after_failure:
+        - tree build
 
     - stage: build
       name: "Python: Generate sources and build wheel pkg"
       language: python
       python: "3.6"
       script:
-        - tree build
         - mkdir -p build/python
         - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
-        - tree build/python
       after_success:
         - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
+      after_failure:
+        - tree build
 
-      # Deploy Python generated sources back to repo
-      # Deploy .NET nupkg to NuGet
-      # Deploy wheel to PyPi
+    - stage: deploy
+      name: "Python: Deploy generated sources back to repo"
+      language: python
+      python: "3.6"
+      deploy:
+        provider: pages
+        local-dir: build/python/
+        target-branch: python
+        keep-history: true
+        github-token: $GITHUB_TOKEN
+        skip_cleanup: true
+        verbose: true
+      after_failure:
+        - tree build
+
+    - stage: deploy
+      name: "Python: Deploy wheel to PyPi"
+      language: python
+      python: "3.6"
+      script: true # TODO deploy target
+      after_failure:
+        - tree build
 
