@@ -1,10 +1,11 @@
 language: minimal
 
 stages:
-  - clean
+  - before_install
   - install
-  - generate
-  - package
+  - before_script
+  - script
+  - after_success
   - name: deploy
     if: branch = master
 
@@ -18,49 +19,45 @@ cache:
   directories:
     - build
 
-# Used by all languages (NOTE: a global install: target needs to be present,
-# since a few languages have defaults which are otherwise used.
-install:
-  - mkdir -p protoc
-  - pushd protoc
-  - wget https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
-  - unzip -u protoc*.zip
-  - export PATH=$PATH:$PWD/bin
-  - popd
-  - tree protoc/
+# Skip any language defaults
+install: skip
 
 # Skip any language defaults
 script: skip
 
 jobs:
   include:
-    - stage: clean
+    # Golang
+    - stage: before_install
       name: "Clean out cache"
-      script:
+      language: go
+      go: "1.10"
+      before_install:
         - tree build
         - rm -rf build
 
     - stage: install
+      name: "Install protoc compiler"
+      language: go
+      go: "1.10"
+      install:
+        - mkdir -p build/protoc
+        - pushd build/protoc
+        - wget https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
+        - unzip -u protoc*.zip
+        - export PATH=$PATH:$PWD/bin
+        - popd
+        - tree build/protoc/
+
+    - stage: before_script
       name: "Fetch Go gRPC protoc plugin"
       language: go
       go: "1.10"
-      script:
+      before_script:
         - go get -u github.com/golang/protobuf/protoc-gen-go
         - export PATH=$PATH:$GOPATH/bin
 
-    - stage: install
-      name: "Fetch C# gRPC protoc plugin"
-      language: csharp
-      mono: none
-      dotnet: 2.0
-      script:
-        - mkdir -p build/csharp_project
-        - pushd build/csharp_project
-        - dotnet new console
-        - env NUGET_PACKAGES=$PWD/packages dotnet add package grpc.tools
-        - popd
-
-    - stage: generate
+    - stage: script
       name: "Generate Go sources"
       language: go
       go: "1.10"
@@ -72,45 +69,6 @@ jobs:
         - echo "$TRAVIS_BUILD_NUMBER" >> build/go/generated.txt
         - tree build/go
 
-    - stage: generate
-      name: "Generate C# sources"
-      language: csharp
-      mono: none
-      dotnet: 2.0
-      script:
-        - tree build
-        - tree $GOPATH
-        - mkdir -p build/csharp
-        - which protoc
-        - ls -la build/csharp_project/grpc.tools/*/tools/linux_x64/
-        - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
-        - tree build/csharp
-
-    - stage: generate
-      name: "Generate Python sources"
-      language: python
-      python: "3.6"
-      script:
-        - tree build
-        - mkdir -p build/python
-        - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
-        - tree build/python
-
-    - stage: package
-      name: "Build .NET nupkg from C# sources"
-      language: csharp
-      mono: none
-      dotnet: 2.0
-      script:
-        - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
-
-    - stage: package
-      name: "Build wheel pkg from Python sources"
-      language: python
-      python: "3.6"
-      script:
-        - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
-
     - stage: deploy
       name: "Deploy Go generated sources back to repo"
       deploy:
@@ -121,6 +79,50 @@ jobs:
         github-token: $GITHUB_TOKEN
         verbose: true
 
+    # C# & .NET
+    - stage: before_install
+      name: "Clean out cache"
+      language: csharp
+      mono: none
+      dotnet: 2.0
+      before_install:
+        - tree build
+        - rm -rf build
+
+    - stage: install
+      name: "Fetch C# gRPC protoc plugin"
+      language: csharp
+      mono: none
+      dotnet: 2.0
+      install:
+        - mkdir -p build/csharp_project
+        - pushd build/csharp_project
+        - dotnet new console
+        - env NUGET_PACKAGES=$PWD/packages dotnet add package grpc.tools
+        - popd
+
+    - stage: script
+      name: "Generate C# sources"
+      language: csharp
+      mono: none
+      dotnet: 2.0
+      script:
+        - tree build
+        - tree $GOPATH
+        - mkdir -p build/csharp
+        - which protoc
+        - ls -la build/csharp_project/packages/grpc.tools/*/tools/linux_x64/
+        - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
+        - tree build/csharp
+
+    - stage: after_success
+      name: "Build .NET nupkg from C# sources"
+      language: csharp
+      mono: none
+      dotnet: 2.0
+      after_success:
+        - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
+
     - stage: deploy
       name: "Deploy C# generated sources back to repo"
       deploy:
@@ -130,6 +132,32 @@ jobs:
         keep-history: true
         github-token: $GITHUB_TOKEN
         verbose: true
+
+    # Python
+    - stage: before_install
+      name: "Clean out cache"
+      language: python
+      python: "3.6"
+      before_install:
+        - tree build
+        - rm -rf build
+
+    - stage: script
+      name: "Generate Python sources"
+      language: python
+      python: "3.6"
+      script:
+        - tree build
+        - mkdir -p build/python
+        - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
+        - tree build/python
+
+    - stage: after_success
+      name: "Build wheel pkg from Python sources"
+      language: python
+      python: "3.6"
+      after_success:
+        - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
 
       # Deploy Python generated sources back to repo
       # Deploy .NET nupkg to NuGet
