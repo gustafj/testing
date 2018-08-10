@@ -35,12 +35,14 @@ jobs:
         - tree build
         - rm -rf build
       install:
-        - chmod +x ./.travis/install_protoc.sh
-        - ./.travis/install_protoc.sh
-        - tree build/protoc/
+        - mkdir -p build/protoc
+        - pushd build/protoc
+        - wget https://github.com/google/protobuf/releases/download/v3.6.1/protoc-3.6.1-linux-x86_64.zip
+        - unzip -o protoc*.zip
+        - popd
       script:
         - go get -u github.com/golang/protobuf/protoc-gen-go
-        - export PATH=$PATH:$GOPATH/bin
+        - mv $GOPATH/bin build/bin
       after_failure:
         - tree build
         - tree $GOPATH
@@ -51,8 +53,13 @@ jobs:
       go: "1.10"
       script:
         - mkdir -p build/go
-        - echo "$TRAVIS_BUILD_NUMBER" >> build/go/generated.txt
+        - PROTOC=build/protoc/bin/protoc
+        - PLUGIN=build/bin/protoc-gen-go
+        - ls -la $PLUGIN
+        - $PROTOC -I . --go_out build/go/ greeter.proto --plugin $PLUGIN
       after_failure:
+        - ls -l $PROTOC
+        - ls -l $PLUGIN
         - tree build
         - tree $GOPATH
 
@@ -97,11 +104,16 @@ jobs:
       dotnet: 2.0
       script:
         - mkdir -p build/csharp
-        - ls -la build/csharp_project/packages/grpc.tools/*/tools/linux_x64/
-        - echo "$TRAVIS_BUILD_NUMBER" >> build/csharp/generated.txt
-      after_success:
+        - TOOLS=$(ls -d build/csharp_project/packages/grpc.tools/*/tools/linux_x64/)
+        - PROTOC=$TOOLS/protoc
+        - PLUGIN=$TOOLS/grpc_csharp_plugin
+        - $PROTOC -I . --csharp_out build/csharp/ --grpc_out build/csharp/ greeter.proto --plugin protoc-gen-grpc=$PLUGIN
+      after_success: # TODO
         - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
       after_failure:
+        - ls -l $TOOLS
+        - ls -l $PROTOC
+        - ls -l $PLUGIN
         - tree build
 
     - stage: deploy
