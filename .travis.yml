@@ -56,7 +56,7 @@ jobs:
         - PROTOC=build/protoc/bin/protoc
         - PLUGIN=build/bin/protoc-gen-go
         - ls -la $PLUGIN
-        - $PROTOC -I . --go_out build/go/ greeter.proto --plugin $PLUGIN
+        - $PROTOC -I . --go_out build/go/ --plugin $PLUGIN greeter.proto
       after_failure:
         - ls -l $PROTOC
         - ls -l $PLUGIN
@@ -107,9 +107,10 @@ jobs:
         - TOOLS=$(ls -d build/csharp_project/packages/grpc.tools/*/tools/linux_x64/)
         - PROTOC=$TOOLS/protoc
         - PLUGIN=$TOOLS/grpc_csharp_plugin
-        - $PROTOC -I . --csharp_out build/csharp/ --grpc_out build/csharp/ greeter.proto --plugin protoc-gen-grpc=$PLUGIN
-      after_success: # TODO
-        - touch build/csharp/gen.$TRAVIS_BUILD_NUMBER.nupkg
+        - $PROTOC -I . --csharp_out build/csharp/ --grpc_out build/csharp/ --plugin protoc-gen-grpc=$PLUGIN greeter.proto
+      after_success:
+        - dotnet build --configuration Release --no-restore --verbosity n
+        - dotnet pack --configuration Release --no-build --no-restore --verbosity n /p:Version=$TRAVIS_BUILD_NUMBER
       after_failure:
         - ls -l $TOOLS
         - ls -l $PROTOC
@@ -143,13 +144,18 @@ jobs:
 
     # Python
     - stage: install
-      name: "Python: Clean out cache"
+      name: "Python: Clean cache and fetch python gRPC plugin"
       language: python
       python: "3.6"
       before_install:
         - tree build
         - rm -rf build
-      install: true # TODO: Fetch python gRPC plugin
+      install:
+        - python -m pip install virtualenv
+        - virtualenv build/venv
+        - source build/venv/bin/activate
+        - python -m pip install --upgrade pip
+        - python -m pip install grpcio-tools googleapis-common-protos
       after_failure:
         - tree build
 
@@ -159,7 +165,10 @@ jobs:
       python: "3.6"
       script:
         - mkdir -p build/python
-        - echo "$TRAVIS_BUILD_NUMBER" >> build/python/generated.txt
+        - python -m pip install virtualenv
+        - virtualenv build/venv
+        - source build/venv/bin/activate
+        - python -m grpc_tools.protoc -I . --python_out build/python/ --grpc_python_out build/python/ greeter.proto
       after_success:
         - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
       after_failure:
