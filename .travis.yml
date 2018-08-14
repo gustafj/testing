@@ -1,5 +1,9 @@
 language: minimal
 
+env:
+  global:
+    - DIRS="a b c"
+
 stages:
   - install
   - build
@@ -22,7 +26,7 @@ install: skip
 # Skip any language defaults
 script: skip
 
-# NOTE: All 'stage:' target _MUST_ have the 'language:' tag to see the correct
+# NOTE: All 'stage:' targets _MUST_ have the 'language:' tag to see the correct
 # cache folders!
 jobs:
   include:
@@ -56,7 +60,7 @@ jobs:
         - PROTOC=build/protoc/bin/protoc
         - PLUGIN=build/bin/protoc-gen-go
         - ls -la $PLUGIN
-        - $PROTOC -I . --go_out build/go/ --plugin $PLUGIN greeter.proto
+        - for DIR in $DIRS; do mkdir -p build/go/$DIR; $PROTOC --go_out build/go/ --plugin $PLUGIN $DIR/*.proto; done
       after_failure:
         - ls -l $PROTOC
         - ls -l $PLUGIN
@@ -103,12 +107,11 @@ jobs:
       mono: none
       dotnet: 2.0
       script:
-        - mkdir -p build/csharp
         - TOOLS=$(ls -d build/csharp_project/packages/grpc.tools/*/tools/linux_x64/)
         - PROTOC=$TOOLS/protoc
         - PLUGIN=$TOOLS/grpc_csharp_plugin
-        - $PROTOC -I . --csharp_out build/csharp/ --grpc_out build/csharp/ --plugin protoc-gen-grpc=$PLUGIN greeter.proto
-      after_success:
+        - for DIR in $DIRS; do mkdir -p build/csharp/$DIR; $PROTOC --csharp_out build/csharp/$DIR --grpc_out build/csharp/$DIR --plugin protoc-gen-grpc=$PLUGIN $DIR/*.proto; done
+      after_success: # TODO import generated code
         - dotnet build --configuration Release --no-restore --verbosity n
         - dotnet pack --configuration Release --no-build --no-restore --verbosity n /p:Version=$TRAVIS_BUILD_NUMBER
       after_failure:
@@ -138,7 +141,7 @@ jobs:
       language: csharp
       mono: none
       dotnet: 2.0
-      script: true # TODO deploy target
+      script: true # TODO
       after_failure:
         - tree build
 
@@ -164,12 +167,11 @@ jobs:
       language: python
       python: "3.6"
       script:
-        - mkdir -p build/python
         - python -m pip install virtualenv
         - virtualenv build/venv
         - source build/venv/bin/activate
-        - python -m grpc_tools.protoc -I . --python_out build/python/ --grpc_python_out build/python/ greeter.proto
-      after_success:
+        - for DIR in $DIRS; do mkdir -p build/python/$DIR; python -m grpc_tools.protoc -I $DIR --python_out build/python/$DIR --grpc_python_out build/python/$DIR $DIR/*.proto; done
+      after_success: # TODO
         - touch build/python/gen.$TRAVIS_BUILD_NUMBER.whl
       after_failure:
         - tree build
@@ -193,7 +195,7 @@ jobs:
       name: "Python: Deploy wheel to PyPi"
       language: python
       python: "3.6"
-      script: true # TODO deploy target
+      script: true # TODO
       after_failure:
         - tree build
 
